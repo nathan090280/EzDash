@@ -16,28 +16,17 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static dashboard files from a robustly-detected root
-const candidates = [
-  process.cwd(),
-  __dirname,
-  path.join(process.cwd(), 'public'),
-  path.join(__dirname, 'public'),
-];
-const ROOT_DIR = (function pickRoot() {
-  for (const p of candidates) {
-    try { if (fs.existsSync(path.join(p, 'index.html'))) return p; } catch {}
-  }
-  return process.cwd();
-})();
-console.log('Static root:', ROOT_DIR);
-app.use(express.static(ROOT_DIR));
-
 app.post('/screenshot', async (req, res) => {
   const { url } = req.body;
 
   if (!url) return res.status(400).json({ error: 'URL is required' });
 
   try {
+    // Validate URL and protocol
+    let parsed;
+    try { parsed = new URL(url); } catch { return res.status(400).json({ error: 'Invalid URL' }); }
+    if (!/^https?:$/.test(parsed.protocol)) return res.status(400).json({ error: 'Only http/https URLs allowed' });
+
     const browser = await puppeteer.launch({
       headless: true,
       args: [
@@ -92,16 +81,6 @@ app.get('/screenshot', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to take screenshot' });
-  }
-});
-
-// SPA fallback: send index.html for all other routes
-app.get('*', (req, res) => {
-  const indexPath = path.join(ROOT_DIR, 'index.html');
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
-  } else {
-    res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>EzDash</title></head><body><h1>EzDash</h1><p>index.html not found at: ${indexPath}</p></body></html>`);
   }
 });
 
