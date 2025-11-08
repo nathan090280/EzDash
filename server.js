@@ -15,8 +15,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static dashboard files
-app.use(express.static(path.join(__dirname)));
+// Serve static dashboard files from the current working directory (Render deploy path)
+const ROOT_DIR = process.cwd();
+app.use(express.static(ROOT_DIR));
 
 app.post('/screenshot', async (req, res) => {
   const { url } = req.body;
@@ -83,7 +84,7 @@ app.get('/screenshot', async (req, res) => {
 
 // SPA fallback: send index.html for all other routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(ROOT_DIR, 'index.html'));
 });
 
 app.listen(port, () => {
