@@ -36,7 +36,7 @@ app.post('/screenshot', async (req, res) => {
     });
     const page = await browser.newPage();
     await page.setViewport({ width: 400, height: 300 }); // widget-size screenshot
-    await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
     const buffer = await page.screenshot({ fullPage: false });
     await browser.close();
 
@@ -70,7 +70,7 @@ app.get('/screenshot', async (req, res) => {
     });
     const page = await browser.newPage();
     await page.setViewport({ width: isNaN(w) ? 400 : w, height: isNaN(h) ? 300 : h });
-    await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
     const buffer = await page.screenshot({ fullPage: false });
     await browser.close();
 
