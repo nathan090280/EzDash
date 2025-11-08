@@ -35,9 +35,9 @@ app.post('/screenshot', async (req, res) => {
       executablePath: execPath,
     });
     const page = await browser.newPage();
-    await page.setViewport({ width: 400, height: 300 }); // widget-size screenshot
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    const buffer = await page.screenshot({ fullPage: false });
+    await page.setViewport({ width: 1280, height: 800 }); // default viewport for full-page screenshot
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+    const buffer = await page.screenshot({ fullPage: true });
     await browser.close();
 
     res.set('Content-Type', 'image/png');
@@ -69,9 +69,9 @@ app.get('/screenshot', async (req, res) => {
       executablePath: execPath,
     });
     const page = await browser.newPage();
-    await page.setViewport({ width: isNaN(w) ? 400 : w, height: isNaN(h) ? 300 : h });
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    const buffer = await page.screenshot({ fullPage: false });
+    await page.setViewport({ width: isNaN(w) ? 1280 : w, height: isNaN(h) ? 800 : h });
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+    const buffer = await page.screenshot({ fullPage: true });
     await browser.close();
 
     res.set('Content-Type', 'image/png');
