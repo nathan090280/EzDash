@@ -31,8 +31,11 @@ app.post('/screenshot', async (req, res) => {
     const execPath = await chromium.executablePath();
     const browser = await puppeteer.launch({
       headless: chromium.headless,
-      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--single-process'],
       executablePath: execPath,
+      defaultViewport: chromium.defaultViewport,
+      ignoreHTTPSErrors: true,
+      timeout: 120000,
     });
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 }); // default viewport for full-page screenshot
@@ -65,8 +68,11 @@ app.get('/screenshot', async (req, res) => {
     const execPath = await chromium.executablePath();
     const browser = await puppeteer.launch({
       headless: chromium.headless,
-      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--single-process'],
       executablePath: execPath,
+      defaultViewport: chromium.defaultViewport,
+      ignoreHTTPSErrors: true,
+      timeout: 120000,
     });
     const page = await browser.newPage();
     await page.setViewport({ width: isNaN(w) ? 1280 : w, height: isNaN(h) ? 800 : h });
