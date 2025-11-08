@@ -1,7 +1,8 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -27,20 +28,10 @@ app.post('/screenshot', async (req, res) => {
     try { parsed = new URL(url); } catch { return res.status(400).json({ error: 'Invalid URL' }); }
     if (!/^https?:$/.test(parsed.protocol)) return res.status(400).json({ error: 'Only http/https URLs allowed' });
 
-    const execPath = (typeof puppeteer.executablePath === 'function' && puppeteer.executablePath())
-      || process.env.PUPPETEER_EXECUTABLE_PATH
-      || undefined;
-    console.log('Launching Puppeteer with executablePath:', execPath || '(bundled/default)');
+    const execPath = await chromium.executablePath();
     const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-zygote',
-        '--single-process'
-      ],
+      headless: chromium.headless,
+      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
       executablePath: execPath,
     });
     const page = await browser.newPage();
@@ -71,19 +62,10 @@ app.get('/screenshot', async (req, res) => {
     try { parsed = new URL(url); } catch { return res.status(400).json({ error: 'Invalid URL' }); }
     if (!/^https?:$/.test(parsed.protocol)) return res.status(400).json({ error: 'Only http/https URLs allowed' });
 
-    const execPath = (typeof puppeteer.executablePath === 'function' && puppeteer.executablePath())
-      || process.env.PUPPETEER_EXECUTABLE_PATH
-      || undefined;
+    const execPath = await chromium.executablePath();
     const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-zygote',
-        '--single-process'
-      ],
+      headless: chromium.headless,
+      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
       executablePath: execPath,
     });
     const page = await browser.newPage();
