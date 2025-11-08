@@ -29,19 +29,32 @@ app.post('/screenshot', async (req, res) => {
     if (!/^https?:$/.test(parsed.protocol)) return res.status(400).json({ error: 'Only http/https URLs allowed' });
 
     const execPath = await chromium.executablePath();
-    const browser = await puppeteer.launch({
-      headless: chromium.headless,
-      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--single-process'],
-      executablePath: execPath,
-      defaultViewport: chromium.defaultViewport,
-      ignoreHTTPSErrors: true,
-      timeout: 120000,
-    });
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 800 }); // default viewport for full-page screenshot
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
-    const buffer = await page.screenshot({ fullPage: true });
-    await browser.close();
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    let buffer;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      let browser;
+      try {
+        browser = await puppeteer.launch({
+          headless: chromium.headless,
+          args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--single-process'],
+          executablePath: execPath,
+          defaultViewport: chromium.defaultViewport,
+          ignoreHTTPSErrors: true,
+          timeout: 120000,
+        });
+        const page = await browser.newPage();
+        await page.setViewport({ width: 1280, height: 800 });
+        await page.goto(url, { waitUntil: 'networkidle2', timeout: 90000 });
+        buffer = await page.screenshot({ fullPage: true });
+        await browser.close();
+        break;
+      } catch (e) {
+        if (browser) { try { await browser.close(); } catch {}
+        }
+        if (attempt === 3) throw e;
+        await sleep(1500 * attempt);
+      }
+    }
 
     res.set('Content-Type', 'image/png');
     res.send(buffer);
@@ -66,19 +79,32 @@ app.get('/screenshot', async (req, res) => {
     if (!/^https?:$/.test(parsed.protocol)) return res.status(400).json({ error: 'Only http/https URLs allowed' });
 
     const execPath = await chromium.executablePath();
-    const browser = await puppeteer.launch({
-      headless: chromium.headless,
-      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--single-process'],
-      executablePath: execPath,
-      defaultViewport: chromium.defaultViewport,
-      ignoreHTTPSErrors: true,
-      timeout: 120000,
-    });
-    const page = await browser.newPage();
-    await page.setViewport({ width: isNaN(w) ? 1280 : w, height: isNaN(h) ? 800 : h });
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
-    const buffer = await page.screenshot({ fullPage: true });
-    await browser.close();
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    let buffer;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      let browser;
+      try {
+        browser = await puppeteer.launch({
+          headless: chromium.headless,
+          args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--single-process'],
+          executablePath: execPath,
+          defaultViewport: chromium.defaultViewport,
+          ignoreHTTPSErrors: true,
+          timeout: 120000,
+        });
+        const page = await browser.newPage();
+        await page.setViewport({ width: isNaN(w) ? 1280 : w, height: isNaN(h) ? 800 : h });
+        await page.goto(url, { waitUntil: 'networkidle2', timeout: 90000 });
+        buffer = await page.screenshot({ fullPage: true });
+        await browser.close();
+        break;
+      } catch (e) {
+        if (browser) { try { await browser.close(); } catch {}
+        }
+        if (attempt === 3) throw e;
+        await sleep(1500 * attempt);
+      }
+    }
 
     res.set('Content-Type', 'image/png');
     res.send(buffer);
