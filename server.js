@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const puppeteer = require('puppeteer');
 const app = express();
 const port = process.env.PORT || 3000;
@@ -15,8 +16,20 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static dashboard files from the current working directory (Render deploy path)
-const ROOT_DIR = process.cwd();
+// Serve static dashboard files from a robustly-detected root
+const candidates = [
+  process.cwd(),
+  __dirname,
+  path.join(process.cwd(), 'public'),
+  path.join(__dirname, 'public'),
+];
+const ROOT_DIR = (function pickRoot() {
+  for (const p of candidates) {
+    try { if (fs.existsSync(path.join(p, 'index.html'))) return p; } catch {}
+  }
+  return process.cwd();
+})();
+console.log('Static root:', ROOT_DIR);
 app.use(express.static(ROOT_DIR));
 
 app.post('/screenshot', async (req, res) => {
@@ -84,7 +97,12 @@ app.get('/screenshot', async (req, res) => {
 
 // SPA fallback: send index.html for all other routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(ROOT_DIR, 'index.html'));
+  const indexPath = path.join(ROOT_DIR, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>EzDash</title></head><body><h1>EzDash</h1><p>index.html not found at: ${indexPath}</p></body></html>`);
+  }
 });
 
 app.listen(port, () => {
