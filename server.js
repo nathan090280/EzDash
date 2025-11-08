@@ -27,6 +27,10 @@ app.post('/screenshot', async (req, res) => {
     try { parsed = new URL(url); } catch { return res.status(400).json({ error: 'Invalid URL' }); }
     if (!/^https?:$/.test(parsed.protocol)) return res.status(400).json({ error: 'Only http/https URLs allowed' });
 
+    const execPath = (typeof puppeteer.executablePath === 'function' && puppeteer.executablePath())
+      || process.env.PUPPETEER_EXECUTABLE_PATH
+      || undefined;
+    console.log('Launching Puppeteer with executablePath:', execPath || '(bundled/default)');
     const browser = await puppeteer.launch({
       headless: true,
       args: [
@@ -34,8 +38,10 @@ app.post('/screenshot', async (req, res) => {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
+        '--no-zygote',
+        '--single-process'
       ],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      executablePath: execPath,
     });
     const page = await browser.newPage();
     await page.setViewport({ width: 400, height: 300 }); // widget-size screenshot
@@ -60,6 +66,14 @@ app.get('/screenshot', async (req, res) => {
   if (!url) return res.status(400).json({ error: 'URL is required' });
 
   try {
+    // Validate URL and protocol
+    let parsed;
+    try { parsed = new URL(url); } catch { return res.status(400).json({ error: 'Invalid URL' }); }
+    if (!/^https?:$/.test(parsed.protocol)) return res.status(400).json({ error: 'Only http/https URLs allowed' });
+
+    const execPath = (typeof puppeteer.executablePath === 'function' && puppeteer.executablePath())
+      || process.env.PUPPETEER_EXECUTABLE_PATH
+      || undefined;
     const browser = await puppeteer.launch({
       headless: true,
       args: [
@@ -67,8 +81,10 @@ app.get('/screenshot', async (req, res) => {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
+        '--no-zygote',
+        '--single-process'
       ],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      executablePath: execPath,
     });
     const page = await browser.newPage();
     await page.setViewport({ width: isNaN(w) ? 400 : w, height: isNaN(h) ? 300 : h });
