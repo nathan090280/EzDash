@@ -71,25 +71,46 @@ app.get('/screenshot', async (req, res) => {
     const execPath = await chromium.executablePath();
     browser = await puppeteer.launch({
       headless: chromium.headless,
-      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      args: [
+        ...chromium.args, 
+        '--no-sandbox', 
+        '--disable-setuid-sandbox', 
+        '--disable-dev-shm-usage', 
+        '--disable-gpu',
+        '--disable-web-security',
+        '--disable-features=IsolateOrigins,site-per-process'
+      ],
       executablePath: execPath,
-      timeout: 30000
+      timeout: 15000
     });
     
     const page = await browser.newPage();
     
-    // Set shorter timeout and less strict wait condition
-    await page.setViewport({ width: isNaN(w) ? 1920 : w, height: isNaN(h) ? 1080 : h });
-    await page.goto(url, { 
-      waitUntil: 'networkidle2', 
-      timeout: 30000 
+    // Block unnecessary resources to speed up loading
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+      const resourceType = req.resourceType();
+      if (['font', 'media', 'video', 'websocket'].includes(resourceType)) {
+        req.abort();
+      } else {
+        req.continue();
+      }
     });
     
-    // Wait a bit for any dynamic content
-    await page.waitForTimeout(1000);
+    // Set viewport and aggressive timeout
+    await page.setViewport({ width: isNaN(w) ? 1920 : w, height: isNaN(h) ? 1080 : h });
+    
+    // Use domcontentloaded - much faster, doesn't wait for all resources
+    await page.goto(url, { 
+      waitUntil: 'domcontentloaded', 
+      timeout: 15000 
+    });
+    
+    // Give it just 500ms for any critical JS
+    await page.waitForTimeout(500);
     
     const buffer = await page.screenshot({ 
-      fullPage: true,
+      fullPage: false,  // Don't try to capture full page, just viewport
       type: 'png'
     });
     
