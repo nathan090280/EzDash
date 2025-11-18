@@ -103,7 +103,11 @@ app.get('/screenshot', async (req, res) => {
     
     // Set viewport with validated dimensions
     console.log(`Setting viewport: ${w}x${h}`);
-    await page.setViewport({ width: w, height: h });
+    await page.setViewport({ 
+      width: w, 
+      height: h,
+      deviceScaleFactor: 1
+    });
     
     // Fast navigation - don't wait for everything
     await page.goto(url, { 
@@ -114,10 +118,15 @@ app.get('/screenshot', async (req, res) => {
     // Wait a bit for content to render
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    // Take full page screenshot
+    // Take viewport screenshot (not full page - that's causing the 0 width issue)
     const buffer = await page.screenshot({ 
-      fullPage: true,
-      type: 'png'
+      type: 'png',
+      clip: {
+        x: 0,
+        y: 0,
+        width: w,
+        height: h
+      }
     });
     
     await browser.close();
