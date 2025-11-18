@@ -86,34 +86,19 @@ app.get('/screenshot', async (req, res) => {
     
     const page = await browser.newPage();
     
-    // Block unnecessary resources to speed up loading
-    await page.setRequestInterception(true);
-    page.on('request', (req) => {
-      const resourceType = req.resourceType();
-      // Block heavy resources but allow images and stylesheets
-      if (['font', 'media', 'video', 'websocket', 'eventsource', 'manifest'].includes(resourceType)) {
-        req.abort();
-      } else {
-        req.continue();
-      }
-    });
-    
-    // Set viewport and aggressive timeout
+    // Set viewport
     await page.setViewport({ width: isNaN(w) ? 1920 : w, height: isNaN(h) ? 1080 : h });
     
-    // Use domcontentloaded - much faster, doesn't wait for all resources
+    // Simple navigation with generous timeout
     await page.goto(url, { 
-      waitUntil: 'domcontentloaded', 
-      timeout: 20000 
+      waitUntil: 'networkidle0', 
+      timeout: 30000 
     });
     
-    // Give it just 1s for any critical JS to render content
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+    // Take full page screenshot
     const buffer = await page.screenshot({ 
-      fullPage: true,  // FULL PAGE CAPTURE - you can scroll and zoom
-      type: 'png',
-      captureBeyondViewport: true
+      fullPage: true,
+      type: 'png'
     });
     
     await browser.close();
