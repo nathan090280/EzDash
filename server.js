@@ -90,18 +90,6 @@ app.get('/screenshot', async (req, res) => {
     
     const page = await browser.newPage();
     
-    // Block only background stuff - allow everything visual
-    await page.setRequestInterception(true);
-    page.on('request', (req) => {
-      const resourceType = req.resourceType();
-      // Only block websockets and media that don't affect visuals
-      if (['websocket', 'eventsource', 'media', 'manifest'].includes(resourceType)) {
-        req.abort();
-      } else {
-        req.continue();
-      }
-    });
-    
     // Set viewport with validated dimensions
     console.log(`Setting viewport: ${w}x${h}`);
     await page.setViewport({ 
@@ -110,14 +98,14 @@ app.get('/screenshot', async (req, res) => {
       deviceScaleFactor: 1
     });
     
-    // Wait for network to be mostly idle
+    // Simple, fast navigation - just wait for DOM
     await page.goto(url, { 
-      waitUntil: 'networkidle2', 
-      timeout: 20000 
+      waitUntil: 'load', 
+      timeout: 30000 
     });
     
-    // Give extra time for widgets to render
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Wait for dynamic content to render
+    await new Promise(resolve => setTimeout(resolve, 5000));
     
     // Take viewport screenshot (not full page - that's causing the 0 width issue)
     const buffer = await page.screenshot({ 
