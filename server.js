@@ -6,6 +6,9 @@ const chromium = require('@sparticuz/chromium');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Serve static files (HTML, CSS, JS)
+app.use(express.static(__dirname));
+
 // Allow JSON requests
 app.use(express.json());
 // Basic CORS for frontend access (images via <img src>)
@@ -29,32 +32,16 @@ app.post('/screenshot', async (req, res) => {
     if (!/^https?:$/.test(parsed.protocol)) return res.status(400).json({ error: 'Only http/https URLs allowed' });
 
     const execPath = await chromium.executablePath();
-    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-    let buffer;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      let browser;
-      try {
-        browser = await puppeteer.launch({
-          headless: chromium.headless,
-          args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--single-process'],
-          executablePath: execPath,
-          defaultViewport: chromium.defaultViewport,
-          ignoreHTTPSErrors: true,
-          timeout: 120000,
-        });
-        const page = await browser.newPage();
-        await page.setViewport({ width: 1280, height: 800 });
-        await page.goto(url, { waitUntil: 'networkidle2', timeout: 90000 });
-        buffer = await page.screenshot({ fullPage: true });
-        await browser.close();
-        break;
-      } catch (e) {
-        if (browser) { try { await browser.close(); } catch {}
-        }
-        if (attempt === 3) throw e;
-        await sleep(1500 * attempt);
-      }
-    }
+    const browser = await puppeteer.launch({
+      headless: chromium.headless,
+      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      executablePath: execPath,
+    });
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1280, height: 800 }); // default viewport for full-page screenshot
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    const buffer = await page.screenshot({ fullPage: true });
+    await browser.close();
 
     res.set('Content-Type', 'image/png');
     res.send(buffer);
@@ -67,8 +54,8 @@ app.post('/screenshot', async (req, res) => {
 // GET variant so it can be used directly as <img src="/screenshot?url=...&w=...&h=...">
 app.get('/screenshot', async (req, res) => {
   const url = req.query.url;
-  const w = parseInt(req.query.w || '400', 10);
-  const h = parseInt(req.query.h || '300', 10);
+  const w = parseInt(req.query.w || '1920', 10);
+  const h = parseInt(req.query.h || '1080', 10);
 
   if (!url) return res.status(400).json({ error: 'URL is required' });
 
@@ -79,32 +66,16 @@ app.get('/screenshot', async (req, res) => {
     if (!/^https?:$/.test(parsed.protocol)) return res.status(400).json({ error: 'Only http/https URLs allowed' });
 
     const execPath = await chromium.executablePath();
-    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-    let buffer;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      let browser;
-      try {
-        browser = await puppeteer.launch({
-          headless: chromium.headless,
-          args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote', '--single-process'],
-          executablePath: execPath,
-          defaultViewport: chromium.defaultViewport,
-          ignoreHTTPSErrors: true,
-          timeout: 120000,
-        });
-        const page = await browser.newPage();
-        await page.setViewport({ width: isNaN(w) ? 1280 : w, height: isNaN(h) ? 800 : h });
-        await page.goto(url, { waitUntil: 'networkidle2', timeout: 90000 });
-        buffer = await page.screenshot({ fullPage: true });
-        await browser.close();
-        break;
-      } catch (e) {
-        if (browser) { try { await browser.close(); } catch {}
-        }
-        if (attempt === 3) throw e;
-        await sleep(1500 * attempt);
-      }
-    }
+    const browser = await puppeteer.launch({
+      headless: chromium.headless,
+      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      executablePath: execPath,
+    });
+    const page = await browser.newPage();
+    await page.setViewport({ width: isNaN(w) ? 1920 : w, height: isNaN(h) ? 1080 : h });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    const buffer = await page.screenshot({ fullPage: true });
+    await browser.close();
 
     res.set('Content-Type', 'image/png');
     res.send(buffer);
