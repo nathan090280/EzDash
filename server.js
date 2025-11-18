@@ -54,8 +54,12 @@ app.post('/screenshot', async (req, res) => {
 // GET variant so it can be used directly as <img src="/screenshot?url=...&w=...&h=...">
 app.get('/screenshot', async (req, res) => {
   const url = req.query.url;
-  const w = parseInt(req.query.w || '1920', 10);
-  const h = parseInt(req.query.h || '1080', 10);
+  let w = parseInt(req.query.w, 10);
+  let h = parseInt(req.query.h, 10);
+  
+  // Ensure valid dimensions
+  if (isNaN(w) || w <= 0) w = 1920;
+  if (isNaN(h) || h <= 0) h = 1080;
 
   if (!url) return res.status(400).json({ error: 'URL is required' });
 
@@ -97,8 +101,9 @@ app.get('/screenshot', async (req, res) => {
       }
     });
     
-    // Set viewport
-    await page.setViewport({ width: isNaN(w) ? 1920 : w, height: isNaN(h) ? 1080 : h });
+    // Set viewport with validated dimensions
+    console.log(`Setting viewport: ${w}x${h}`);
+    await page.setViewport({ width: w, height: h });
     
     // Fast navigation - don't wait for everything
     await page.goto(url, { 
