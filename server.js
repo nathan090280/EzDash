@@ -95,11 +95,12 @@ async function takeScreenshot(url, w, h, res) {
         '--disable-setuid-sandbox', 
         '--disable-dev-shm-usage', 
         '--disable-gpu',
-        '--disable-web-security',
-        '--disable-features=IsolateOrigins,site-per-process'
+        '--single-process',
+        '--no-zygote'
       ],
       executablePath: execPath,
-      timeout: 15000
+      timeout: 60000,
+      protocolTimeout: 60000
     });
     
     const page = await browser.newPage();
@@ -112,14 +113,14 @@ async function takeScreenshot(url, w, h, res) {
       deviceScaleFactor: 1
     });
     
-    // Simple, fast navigation - just wait for DOM
+    // Simple navigation
     await page.goto(url, { 
-      waitUntil: 'load', 
-      timeout: 30000 
+      waitUntil: 'domcontentloaded', 
+      timeout: 60000 
     });
     
-    // Wait for dynamic content to render
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    // Wait for content to render
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
     // Take viewport screenshot (not full page - that's causing the 0 width issue)
     const buffer = await page.screenshot({ 
