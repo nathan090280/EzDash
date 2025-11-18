@@ -6,6 +6,30 @@ const chromium = require('@sparticuz/chromium');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Queue system to process screenshots sequentially
+const screenshotQueue = [];
+let isProcessing = false;
+
+async function processQueue() {
+  if (isProcessing || screenshotQueue.length === 0) return;
+  
+  isProcessing = true;
+  const { url, w, h, res } = screenshotQueue.shift();
+  
+  try {
+    await takeScreenshot(url, w, h, res);
+  } catch (err) {
+    console.error('Queue processing error:', err);
+  }
+  
+  isProcessing = false;
+  
+  // Process next item
+  if (screenshotQueue.length > 0) {
+    setTimeout(processQueue, 100);
+  }
+}
+
 // Serve static files (HTML, CSS, JS)
 app.use(express.static(__dirname));
 
@@ -51,18 +75,8 @@ app.post('/screenshot', async (req, res) => {
   }
 });
 
-// GET variant so it can be used directly as <img src="/screenshot?url=...&w=...&h=...">
-app.get('/screenshot', async (req, res) => {
-  const url = req.query.url;
-  let w = parseInt(req.query.w, 10);
-  let h = parseInt(req.query.h, 10);
-  
-  // Ensure valid dimensions
-  if (isNaN(w) || w <= 0) w = 1920;
-  if (isNaN(h) || h <= 0) h = 1080;
-
-  if (!url) return res.status(400).json({ error: 'URL is required' });
-
+// Screenshot function
+async function takeScreenshot(url, w, h, res) {
   let browser;
   try {
     // Validate URL and protocol
@@ -133,6 +147,26 @@ app.get('/screenshot', async (req, res) => {
     }
     res.status(500).json({ error: 'Failed to take screenshot: ' + err.message });
   }
+}
+
+// GET endpoint - adds to queue
+app.get('/screenshot', async (req, res) => {
+  const url = req.query.url;
+  let w = parseInt(req.query.w, 10);
+  let h = parseInt(req.query.h, 10);
+  
+  // Ensure valid dimensions
+  if (isNaN(w) || w <= 0) w = 1920;
+  if (isNaN(h) || h <= 0) h = 1080;
+
+  if (!url) return res.status(400).json({ error: 'URL is required' });
+  
+  // Add to queue
+  screenshotQueue.push({ url, w, h, res });
+  console.log(`Queued screenshot request. Queue length: ${screenshotQueue.length}`);
+  
+  // Start processing
+  processQueue();
 });
 
 app.listen(port, () => {
