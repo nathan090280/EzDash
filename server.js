@@ -108,7 +108,7 @@ app.get('/screenshot', async (req, res) => {
     });
     
     // Give it just 1s for any critical JS to render content
-    await page.waitForTimeout(1000);
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     const buffer = await page.screenshot({ 
       fullPage: true,  // FULL PAGE CAPTURE - you can scroll and zoom
