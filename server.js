@@ -90,7 +90,8 @@ app.get('/screenshot', async (req, res) => {
     await page.setRequestInterception(true);
     page.on('request', (req) => {
       const resourceType = req.resourceType();
-      if (['font', 'media', 'video', 'websocket'].includes(resourceType)) {
+      // Block heavy resources but allow images and stylesheets
+      if (['font', 'media', 'video', 'websocket', 'eventsource', 'manifest'].includes(resourceType)) {
         req.abort();
       } else {
         req.continue();
@@ -103,22 +104,23 @@ app.get('/screenshot', async (req, res) => {
     // Use domcontentloaded - much faster, doesn't wait for all resources
     await page.goto(url, { 
       waitUntil: 'domcontentloaded', 
-      timeout: 15000 
+      timeout: 20000 
     });
     
-    // Give it just 500ms for any critical JS
-    await page.waitForTimeout(500);
+    // Give it just 1s for any critical JS to render content
+    await page.waitForTimeout(1000);
     
     const buffer = await page.screenshot({ 
-      fullPage: false,  // Don't try to capture full page, just viewport
-      type: 'png'
+      fullPage: true,  // FULL PAGE CAPTURE - you can scroll and zoom
+      type: 'png',
+      captureBeyondViewport: true
     });
     
     await browser.close();
     browser = null;
 
     res.set('Content-Type', 'image/png');
-    res.set('Cache-Control', 'public, max-age=3600');
+    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
     res.send(buffer);
     
     console.log(`Screenshot completed for: ${url}`);
