@@ -86,14 +86,28 @@ app.get('/screenshot', async (req, res) => {
     
     const page = await browser.newPage();
     
+    // Block heavy resources to speed up
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+      const resourceType = req.resourceType();
+      if (['font', 'media', 'video', 'websocket', 'eventsource', 'manifest', 'other'].includes(resourceType)) {
+        req.abort();
+      } else {
+        req.continue();
+      }
+    });
+    
     // Set viewport
     await page.setViewport({ width: isNaN(w) ? 1920 : w, height: isNaN(h) ? 1080 : h });
     
-    // Simple navigation with generous timeout
+    // Fast navigation - don't wait for everything
     await page.goto(url, { 
-      waitUntil: 'networkidle0', 
-      timeout: 30000 
+      waitUntil: 'domcontentloaded', 
+      timeout: 15000 
     });
+    
+    // Wait a bit for content to render
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Take full page screenshot
     const buffer = await page.screenshot({ 
